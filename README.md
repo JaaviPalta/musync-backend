@@ -64,7 +64,7 @@ prisma/
 ## Endpoints principales
 | Método | Ruta | Acceso | Función |
 |---|---|---|---|
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/auth/register` | Público | Registrar artista. |
+| ![POST](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/auth/register` | Público | Registrar artista. |
 | ![POST](https://img.shields.io/badge/POST-49cc90?style=flat-square) | `/api/auth/login` | Público | Iniciar sesión. |
 | ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/auth/me` | Privado | Obtener sesión actual. |
 | ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/artists/:username` | Público | Obtener perfil público completo. |
