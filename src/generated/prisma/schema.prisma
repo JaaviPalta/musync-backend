@@ -1,0 +1,176 @@
+// MUSYNC - Prisma schema para Neon (PostgreSQL)
+// Compatible con Prisma 7
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------
+
+enum PublicationType {
+  music
+  digital_product
+  service
+  portfolio
+}
+
+enum QuoteStatus {
+  pending
+  reviewed
+  accepted
+  rejected
+}
+
+enum QuoteRequestType {
+  quote
+  booking
+}
+
+enum OrderStatus {
+  created
+  cancelled
+}
+
+// ---------------------------------------------------------
+// MODELOS
+// ---------------------------------------------------------
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(120)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  artistProfile ArtistProfile?
+
+  @@map("users")
+}
+
+model ArtistProfile {
+  id         Int     @id @default(autoincrement())
+  userId     Int     @unique @map("user_id")
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistName String  @map("artist_name") @db.VarChar(120)
+  username   String  @unique @db.VarChar(30)
+  bio        String?
+  specialty  String? @db.VarChar(120)
+  city       String? @db.VarChar(120)
+  country    String? @db.VarChar(120)
+  avatarUrl  String? @map("avatar_url")
+  coverUrl   String? @map("cover_url")
+
+  spotifyUrl   String? @map("spotify_url")
+  youtubeUrl   String? @map("youtube_url")
+  instagramUrl String? @map("instagram_url")
+  tiktokUrl    String? @map("tiktok_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  publications Publication[]
+  shows        Show[]
+  quotes       Quote[]
+  orders       Order[]
+
+  @@index([username])
+  @@map("artist_profiles")
+}
+
+model Publication {
+  id              Int             @id @default(autoincrement())
+  artistProfileId Int             @map("artist_profile_id")
+  artistProfile   ArtistProfile   @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+  type            PublicationType
+  title           String          @db.VarChar(160)
+  description     String?
+  price           Int?
+  imageUrl        String?         @map("image_url")
+  externalUrl     String?         @map("external_url")
+  isActive        Boolean         @default(true) @map("is_active")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  quotes     Quote[]
+  orderItems OrderItem[]
+
+  @@index([artistProfileId])
+  @@index([type, isActive])
+  @@map("publications")
+}
+
+model Show {
+  id              Int           @id @default(autoincrement())
+  artistProfileId Int           @map("artist_profile_id")
+  artistProfile   ArtistProfile @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+  name            String        @db.VarChar(160)
+  venue           String?       @db.VarChar(160)
+  city            String?       @db.VarChar(120)
+  showDate        DateTime      @map("show_date")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@index([artistProfileId])
+  @@index([showDate])
+  @@map("shows")
+}
+
+model Quote {
+  id              Int              @id @default(autoincrement())
+  artistProfileId Int              @map("artist_profile_id")
+  artistProfile   ArtistProfile    @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+  publicationId   Int?             @map("publication_id")
+  publication     Publication?     @relation(fields: [publicationId], references: [id], onDelete: SetNull)
+  requestType     QuoteRequestType @default(quote) @map("request_type")
+  clientName      String           @map("client_name") @db.VarChar(120)
+  clientEmail     String           @map("client_email") @db.VarChar(255)
+  budget          Int?
+  eventDate       DateTime?        @map("event_date") @db.Date
+  message         String
+  status          QuoteStatus      @default(pending)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@index([artistProfileId])
+  @@index([status])
+  @@map("quotes")
+}
+
+model Order {
+  id              Int           @id @default(autoincrement())
+  artistProfileId Int           @map("artist_profile_id")
+  artistProfile   ArtistProfile @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+  buyerName       String        @map("buyer_name") @db.VarChar(120)
+  buyerEmail      String        @map("buyer_email") @db.VarChar(255)
+  status          OrderStatus   @default(created)
+  total           Int           @default(0)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  items OrderItem[]
+
+  @@index([artistProfileId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id            Int         @id @default(autoincrement())
+  orderId       Int         @map("order_id")
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  publicationId Int         @map("publication_id")
+  publication   Publication @relation(fields: [publicationId], references: [id])
+  quantity      Int
+  unitPrice     Int         @map("unit_price")
+  lineTotal     Int         @map("line_total")
+
+  @@index([orderId])
+  @@map("order_items")
+}
