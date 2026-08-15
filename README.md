@@ -1,95 +1,151 @@
 # MUSYNC Backend
 
-Backend del MVP de MUSYNC, desarrollado con Node.js, Express y Prisma para PostgreSQL.
+Backend del MVP de MUSYNC, desarrollado con Node.js, Express, Prisma y PostgreSQL.
 
 ## Descripción
 
-MUSYNC es una plataforma para que músicos y artistas independientes gestionen su identidad profesional, publiquen contenido, ofrezcan servicios y reciban cotizaciones o pedidos desde un único perfil público.
+MUSYNC es una plataforma para que músicos y artistas independientes gestionen su identidad profesional, publiquen contenido, ofrezcan servicios y reciban cotizaciones o solicitudes de contratación desde un único perfil público.
 
 Este repositorio contiene la API REST del backend del proyecto.
 
 ## Stack tecnológico
 
-- Node.js
+- Node.js 18+
 - Express
 - PostgreSQL
-- Prisma
+- Prisma ORM
 - JWT
 - Zod
 - CORS
 
 ## Requisitos
 
-- Node.js 18+
-- PostgreSQL
-- npm o pnpm
+- Node.js 18 o superior.
+- PostgreSQL.
+- npm o pnpm.
+- Una base de datos PostgreSQL disponible para el proyecto.
 
 ## Instalación
 
-1. Clona el repositorio:
+### 1. Clonar el repositorio
+
 ```bash
 git clone https://github.com/JaaviPalta/musync-backend.git
 cd musync-backend
 ```
-2. Instala las dependencias:
+
+### 2. Instalar dependencias
+
 ```bash
 npm install
 ```
-3. Crea un archivo .env en la raíz con tu configuración:
-```bash
+
+### 3. Configurar las variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto:
+
+```env
 DATABASE_URL="postgresql://postgres:tu_password@localhost:5432/musync_dev?schema=public"
 NODE_ENV="development"
-JWT_SECRET="musync-dev-secret"
+JWT_SECRET="reemplaza-este-valor-por-un-secreto-seguro"
 PORT=3000
 ```
-4. Genera la base de datos con Prisma:
+
+Asegúrate de que PostgreSQL esté ejecutándose y que la base de datos `musync_dev` exista.
+
+> El valor de `JWT_SECRET` es únicamente de ejemplo. En producción debes utilizar un secreto largo, aleatorio y almacenado de forma segura.
+
+### 4. Ejecutar las migraciones
+
 ```bash
 npx prisma migrate dev --name init
 ```
-5. npm run dev:
+
+Opcionalmente, puedes generar el cliente de Prisma:
+
+```bash
+npx prisma generate
+```
+
+### 5. Iniciar el servidor
+
+Modo desarrollo:
+
 ```bash
 npm run dev
 ```
-## Estructura del proyecto
-```bash
-src/
-  app.js
-  server.js
-  lib/
-  middlewares/
-  modules/
-prisma/
-  schema.prisma
+
+La API estará disponible en:
+
+```text
+http://localhost:3000/api
 ```
+
+## Estructura del proyecto
+
+```text
+src/
+├── app.js
+├── server.js
+├── lib/
+├── middlewares/
+└── modules/
+
+prisma/
+└── schema.prisma
+```
+
 ## Endpoints principales
+
 | Método | Ruta | Acceso | Función |
 |---|---|---|---|
-| ![POST](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/auth/register` | Público | Registrar artista. |
-| ![POST](https://img.shields.io/badge/POST-49cc90?style=flat-square) | `/api/auth/login` | Público | Iniciar sesión. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/auth/me` | Privado | Obtener sesión actual. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/artists/:username` | Público | Obtener perfil público completo. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/profile` | Privado | Obtener perfil propio. |
-| ![PUT](https://img.shields.io/badge/PUT-fca130?style=flat-square) | `/api/profile` | Privado | Crear o actualizar perfil propio. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/publications/:id` | Público | Ver detalle de publicación activa. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/artists/:username/publications` | Público | Listar publicaciones del artista. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/publications` | Privado | Listar publicaciones propias. |
-| ![POST](https://img.shields.io/badge/POST-49cc90?style=flat-square) | `/api/publications` | Privado | Crear publicación. |
-| ![PUT](https://img.shields.io/badge/PUT-fca130?style=flat-square) | `/api/publications/:id` | Privado | Editar publicación propia. |
-| ![DELETE](https://img.shields.io/badge/DELETE-f93e3e?style=flat-square) | `/api/publications/:id` | Privado | Eliminar o desactivar publicación propia. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/artists/:username/shows` | Público | Listar shows del artista. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/shows` | Privado | Listar shows propios. |
-| ![POST](https://img.shields.io/badge/POST-49cc90?style=flat-square) | `/api/shows` | Privado | Crear show. |
-| ![PUT](https://img.shields.io/badge/PUT-fca130?style=flat-square) | `/api/shows/:id` | Privado | Editar show propio. |
-| ![DELETE](https://img.shields.io/badge/DELETE-f93e3e?style=flat-square) | `/api/shows/:id` | Privado | Eliminar show propio. |
-| ![POST](https://img.shields.io/badge/POST-49cc90?style=flat-square) | `/api/quotes` | Público | Enviar cotización o contratación. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/quotes` | Privado | Listar solicitudes recibidas. |
-| ![PATCH](https://img.shields.io/badge/PATCH-50e3c2?style=flat-square) | `/api/quotes/:id/status` | Privado | Cambiar estado de una solicitud. |
-| ![POST](https://img.shields.io/badge/POST-49cc90?style=flat-square) | `/api/orders` | Público | Crear orden simulada. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/orders` | Privado | Listar pedidos recibidos por el artista. |
-| ![GET](https://img.shields.io/badge/GET-61affe?style=flat-square) | `/api/orders/:id` | Privado | Ver detalle de un pedido relacionado. |
+| POST | `/api/auth/register` | Público | Registrar un artista. |
+| POST | `/api/auth/login` | Público | Iniciar sesión. |
+| GET | `/api/auth/me` | Privado | Obtener la sesión actual. |
+| GET | `/api/artists/:username` | Público | Obtener el perfil público completo de un artista. |
+| GET | `/api/profile` | Privado | Obtener el perfil propio. |
+| PUT | `/api/profile` | Privado | Crear o actualizar el perfil propio. |
+| GET | `/api/publications/:id` | Público | Ver el detalle de una publicación activa. |
+| GET | `/api/artists/:username/publications` | Público | Listar las publicaciones de un artista. |
+| GET | `/api/publications` | Privado | Listar las publicaciones propias. |
+| POST | `/api/publications` | Privado | Crear una publicación. |
+| PUT | `/api/publications/:id` | Privado | Editar una publicación propia. |
+| DELETE | `/api/publications/:id` | Privado | Eliminar o desactivar una publicación propia. |
+| GET | `/api/artists/:username/shows` | Público | Listar los shows de un artista. |
+| GET | `/api/shows` | Privado | Listar los shows propios. |
+| POST | `/api/shows` | Privado | Crear un show. |
+| PUT | `/api/shows/:id` | Privado | Editar un show propio. |
+| DELETE | `/api/shows/:id` | Privado | Eliminar un show propio. |
+| POST | `/api/quotes` | Público | Enviar una cotización o solicitud de contratación. |
+| GET | `/api/quotes` | Privado | Listar las solicitudes recibidas. |
+| PATCH | `/api/quotes/:id/status` | Privado | Cambiar el estado de una solicitud. |
+| POST | `/api/orders` | Público | Crear una orden simulada. |
+| GET | `/api/orders` | Privado | Listar los pedidos recibidos por el artista. |
+| GET | `/api/orders/:id` | Privado | Ver el detalle de un pedido relacionado. |
 
-Estado del proyecto
-Actualmente en desarrollo del MVP backend.
+## Autenticación
 
-Licencia
+Los endpoints privados requieren un token JWT en el encabezado:
+
+```http
+Authorization: Bearer <token>
+```
+
+## Códigos de respuesta
+
+- `200 OK`: Solicitud procesada correctamente.
+- `201 Created`: Recurso creado correctamente.
+- `400 Bad Request`: Datos inválidos.
+- `401 Unauthorized`: Falta autenticación o el token no es válido.
+- `403 Forbidden`: El usuario no tiene permisos suficientes.
+- `404 Not Found`: Recurso no encontrado.
+- `409 Conflict`: El recurso ya existe.
+- `500 Internal Server Error`: Error inesperado del servidor.
+
+## Estado del proyecto
+
+Actualmente se encuentra en desarrollo como MVP del backend.
+
+## Licencia
+
 ISC
