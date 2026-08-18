@@ -1,40 +1,32 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'musync-dev-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 
-export function hashPassword(password) {
-  return bcrypt.hash(password, 10);
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET no está configurado');
 }
 
-export function comparePassword(password, hash) {
-  return bcrypt.compare(password, hash);
+const JWT_ALGORITHM = 'HS256';
+const BCRYPT_ROUNDS = 12;
+
+export function hashPassword(password) {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
+}
+
+export function comparePassword(password, passwordHash) {
+  return bcrypt.compare(password, passwordHash);
 }
 
 export function signToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, JWT_SECRET, {
+    algorithm: JWT_ALGORITHM,
+    expiresIn: '7d',
+  });
 }
 
 export function verifyToken(token) {
-  return jwt.verify(token, JWT_SECRET);
-}
-
-export function authMiddleware(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-  if (!token) {
-    return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token faltante o inválido' } });
-  }
-
-  try {
-    const decoded = verifyToken(token);
-    req.user = {
-      userId: decoded.userId,
-      email: decoded.email,
-    };
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token inválido o expirado' } });
-  }
+  return jwt.verify(token, JWT_SECRET, {
+    algorithms: [JWT_ALGORITHM],
+  });
 }

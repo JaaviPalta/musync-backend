@@ -1,5 +1,15 @@
 export function loggerMiddleware(req, res, next) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.originalUrl}`);
-  next();
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+
+    console.log(
+      `[${new Date().toISOString()}] ` +
+      `${req.method} ${req.originalUrl} ` +
+      `${res.statusCode} ${duration}ms`,
+    );
+  });
+
+  return next();
 }

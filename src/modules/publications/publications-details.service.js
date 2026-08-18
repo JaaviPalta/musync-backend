@@ -1,67 +1,176 @@
 import prisma from '../../lib/prisma.js';
 
-export async function getPublicationById(publicationId) {
-  const publication = await prisma.publication.findUnique({
-    where: { id: Number(publicationId) },
-    include: {
-      artistProfile: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+function createHttpError(message, code, statusCode) {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = statusCode;
+  return error;
+}
+
+function parsePublicationId(publicationId) {
+  const parsedId = Number(publicationId);
+
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw createHttpError(
+      'El id de la publicación no es válido',
+      'VALIDATION_ERROR',
+      400,
+    );
+  }
+
+  return parsedId;
+}
+
+const publicationResponseSelect = {
+  id: true,
+  type: true,
+  title: true,
+  description: true,
+  price: true,
+  imageUrl: true,
+  externalUrl: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+  artistProfile: {
+    select: {
+      id: true,
+      artistName: true,
+      username: true,
+      avatarUrl: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
       },
     },
+  },
+};
+
+export async function getPublicationById(publicationId) {
+  const id = parsePublicationId(publicationId);
+
+  const publication = await prisma.publication.findFirst({
+    where: {
+      id,
+      isActive: true,
+    },
+    select: publicationResponseSelect,
   });
 
-  if (!publication || !publication.isActive) {
-    const error = new Error('Publicación no encontrada');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+  if (!publication) {
+    throw createHttpError(
+      'Publicación no encontrada',
+      'NOT_FOUND',
+      404,
+    );
   }
 
   return publication;
 }
 
-export async function updatePublicationById(userId, publicationId, payload) {
-  const userProfile = await prisma.artistProfile.findUnique({ where: { userId } });
+export async function updatePublicationById(
+  userId,
+  publicationId,
+  payload,
+) {
+  const id = parsePublicationId(publicationId);
 
-  const publication = await prisma.publication.findUnique({ where: { id: Number(publicationId) } });
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
+  });
 
-  if (!publication || !userProfile || publication.artistProfileId !== userProfile.id) {
-    const error = new Error('No tienes permisos para editar esta publicación');
-    error.code = 'FORBIDDEN';
-    error.statusCode = 403;
-    throw error;
+  if (!profile) {
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
-  return prisma.publication.update({
-    where: { id: Number(publicationId) },
-    data: {
-      type: payload.type ?? publication.type,
-      title: payload.title ? String(payload.title).trim() : publication.title,
-      description: payload.description !== undefined ? payload.description : publication.description,
-      price: payload.price !== undefined ? (payload.price !== null ? Number(payload.price) : null) : publication.price,
-      imageUrl: payload.imageUrl !== undefined ? payload.imageUrl : publication.imageUrl,
-      externalUrl: payload.externalUrl !== undefined ? payload.externalUrl : publication.externalUrl,
-      isActive: payload.isActive !== undefined ? Boolean(payload.isActive) : publication.isActive,
+  const publication = await prisma.publication.findFirst({
+    where: {
+      id,
+      artistProfileId: profile.id,
     },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!publication) {
+    throw createHttpError(
+      'Publicación no encontrada',
+      'NOT_FOUND',
+      404,
+    );
+  }
+
+  const updateData = Object.fromEntries(
+    Object.entries(payload).filter(
+      ([, value]) => value !== undefined,
+    ),
+  );
+
+  return prisma.publication.update({
+    where: { id },
+    data: updateData,
+    select: publicationResponseSelect,
   });
 }
 
-export async function deletePublicationById(userId, publicationId) {
-  const userProfile = await prisma.artistProfile.findUnique({ where: { userId } });
+export async function deletePublicationById(
+  userId,
+  publicationId,
+) {
+  const id = parsePublicationId(publicationId);
 
-  const publication = await prisma.publication.findUnique({ where: { id: Number(publicationId) } });
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
+  });
 
-  if (!publication || !userProfile || publication.artistProfileId !== userProfile.id) {
-    const error = new Error('No tienes permisos para eliminar esta publicación');
-    error.code = 'FORBIDDEN';
-    error.statusCode = 403;
-    throw error;
+  if (!profile) {
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
+  }
+
+  const publication = await prisma.publication.findFirst({
+    where: {
+      id,
+      artistProfileId: profile.id,
+    },
+    select: {
+      id: true,
+      isActive: true,
+    },
+  });
+
+  if (!publication) {
+    throw createHttpError(
+      'Publicación no encontrada',
+      'NOT_FOUND',
+      404,
+    );
+  }
+
+  if (!publication.isActive) {
+    return;
   }
 
   await prisma.publication.update({
-    where: { id: Number(publicationId) },
-    data: { isActive: false },
+    where: { id },
+    data: {
+      isActive: false,
+    },
   });
-
-  return true;
 }

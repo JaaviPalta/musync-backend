@@ -1,7 +1,10 @@
 import { Router } from 'express';
+
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { validateMiddleware } from '../../middlewares/validate.middleware.js';
+
 import { updatePublicationSchema } from './publications.schema.js';
+
 import {
   getPublicationByIdController,
   updatePublicationByIdController,
@@ -10,8 +13,22 @@ import {
 
 const router = Router();
 
-router.get('/publications/:id', getPublicationByIdController);
-router.put('/publications/:id', authMiddleware, validateMiddleware(updatePublicationSchema), updatePublicationByIdController);
-router.delete('/publications/:id', authMiddleware, deletePublicationByIdController);
+router.get(
+  '/publications/:id',
+  getPublicationByIdController,
+);
+
+router.patch(
+  '/publications/:id',
+  authMiddleware,
+  validateMiddleware(updatePublicationSchema),
+  updatePublicationByIdController,
+);
+
+router.delete(
+  '/publications/:id',
+  authMiddleware,
+  deletePublicationByIdController,
+);
 
 export default router;

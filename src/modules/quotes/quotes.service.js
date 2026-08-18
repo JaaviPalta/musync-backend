@@ -1,106 +1,226 @@
 import prisma from '../../lib/prisma.js';
 
-export async function createQuote(payload) {
-  const { artistId, publicationId, requestType, clientName, clientEmail, budget, eventDate, message } = payload;
+function createHttpError(message, code, statusCode) {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = statusCode;
+  return error;
+}
 
-  let profile = null;
+function parseQuoteId(quoteId) {
+  const parsedId = Number(quoteId);
 
-  if (artistId) {
-    profile = await prisma.artistProfile.findUnique({ where: { id: Number(artistId) } });
-  } else if (publicationId) {
-    const publication = await prisma.publication.findUnique({ where: { id: Number(publicationId) } });
-    if (!publication) {
-      const error = new Error('Publicación no encontrada');
-      error.code = 'NOT_FOUND';
-      error.statusCode = 404;
-      throw error;
-    }
-    profile = await prisma.artistProfile.findUnique({ where: { id: publication.artistProfileId } });
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw createHttpError(
+      'El id de la cotización no es válido',
+      'VALIDATION_ERROR',
+      400,
+    );
   }
 
-  if (!profile) {
-    const error = new Error('Artista o publicación no encontrada');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+  return parsedId;
+}
+
+function toDateOnly(value) {
+  if (value === undefined || value === null) {
+    return null;
   }
 
-  return prisma.quote.create({
-    data: {
-      artistProfileId: profile.id,
-      publicationId: publicationId ? Number(publicationId) : null,
-      requestType: requestType || 'quote',
-      clientName: String(clientName).trim(),
-      clientEmail: String(clientEmail).trim(),
-      budget: budget !== undefined && budget !== null ? Number(budget) : null,
-      eventDate: eventDate ? new Date(eventDate) : null,
-      message: String(message),
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw createHttpError(
+      'La fecha del evento no es válida',
+      'VALIDATION_ERROR',
+      400,
+    );
+  }
+
+  return date;
+}
+
+const quoteSelect = {
+  id: true,
+  requestType: true,
+  clientName: true,
+  clientEmail: true,
+  budget: true,
+  eventDate: true,
+  message: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+
+  publication: {
+    select: {
+      id: true,
+      title: true,
+      type: true,
     },
+  },
+
+  artistProfile: {
+    select: {
+      id: true,
+      artistName: true,
+      username: true,
+    },
+  },
+};
+
+export async function createQuote(payload) {
+  const {
+    artistId,
+    publicationId,
+    requestType,
+    clientName,
+    clientEmail,
+    budget,
+    eventDate,
+    message,
+  } = payload;
+
+  let artistProfileId;
+  let resolvedPublicationId = null;
+
+  if (publicationId) {
+    const publication = await prisma.publication.findFirst({
+      where: {
+        id: publicationId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        artistProfileId: true,
+      },
+    });
+
+    if (!publication) {
+      throw createHttpError(
+        'Publicación no encontrada',
+        'NOT_FOUND',
+        404,
+      );
+    }
+
+    artistProfileId = publication.artistProfileId;
+    resolvedPublicationId = publication.id;
+  } else {
+    const profile = await prisma.artistProfile.findUnique({
+      where: {
+        id: artistId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!profile) {
+      throw createHttpError(
+        'Artista no encontrado',
+        'NOT_FOUND',
+        404,
+      );
+    }
+
+    artistProfileId = profile.id;
+  }
+
+  const quote = await prisma.quote.create({
+    data: {
+      artistProfileId,
+      publicationId: resolvedPublicationId,
+      requestType,
+      clientName,
+      clientEmail,
+      budget: budget ?? null,
+      eventDate: toDateOnly(eventDate),
+      message,
+    },
+    select: quoteSelect,
   });
+
+  return quote;
 }
 
 export async function getQuotes(userId) {
-  if (!userId) {
-    return prisma.quote.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: { publication: true },
-    });
-  }
-
-  const profile = await prisma.artistProfile.findUnique({ where: { userId } });
+  const profile = await prisma.artistProfile.findUnique({
+    where: {
+      userId,
+    },
+    select: {
+      id: true,
+    },
+  });
 
   if (!profile) {
-    const error = new Error('Perfil no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
   return prisma.quote.findMany({
-    where: { artistProfileId: profile.id },
-    orderBy: { createdAt: 'desc' },
-    include: { publication: true },
+    where: {
+      artistProfileId: profile.id,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    select: quoteSelect,
   });
 }
 
-export async function updateQuoteStatus(userId, quoteId, payload) {
-  const profile = await prisma.artistProfile.findUnique({ where: { userId } });
+export async function updateQuoteStatus(
+  userId,
+  quoteId,
+  status,
+) {
+  const id = parseQuoteId(quoteId);
+
+  const profile = await prisma.artistProfile.findUnique({
+    where: {
+      userId,
+    },
+    select: {
+      id: true,
+    },
+  });
 
   if (!profile) {
-    const error = new Error('Perfil no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
-  const quote = await prisma.quote.findUnique({ where: { id: Number(quoteId) } });
+  const quote = await prisma.quote.findFirst({
+    where: {
+      id,
+      artistProfileId: profile.id,
+    },
+    select: {
+      id: true,
+    },
+  });
 
   if (!quote) {
-    const error = new Error('Cotización no encontrada');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
-  }
-
-  if (quote.artistProfileId !== profile.id) {
-    const error = new Error('No tienes permisos para actualizar esta cotización');
-    error.code = 'FORBIDDEN';
-    error.statusCode = 403;
-    throw error;
-  }
-
-  const status = payload.status;
-  const validStatuses = ['pending', 'reviewed', 'accepted', 'rejected'];
-
-  if (!status || !validStatuses.includes(status)) {
-    const error = new Error('El estado de la cotización es inválido');
-    error.code = 'INVALID_STATUS';
-    error.statusCode = 400;
-    throw error;
+    throw createHttpError(
+      'Cotización no encontrada',
+      'NOT_FOUND',
+      404,
+    );
   }
 
   return prisma.quote.update({
-    where: { id: Number(quoteId) },
-    data: { status },
+    where: {
+      id,
+    },
+    data: {
+      status,
+    },
+    select: quoteSelect,
   });
 }

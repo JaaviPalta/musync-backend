@@ -1,33 +1,73 @@
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '../lib/auth.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'musync-dev-secret';
+function unauthorizedResponse(res, message) {
+  return res.status(401).json({
+    error: {
+      code: 'UNAUTHORIZED',
+      message,
+    },
+  });
+}
 
 export function authMiddleware(req, res, next) {
-  const authorization = req.headers.authorization || '';
-  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : null;
+  const authorization = req.get('authorization');
+
+  if (!authorization?.startsWith('Bearer ')) {
+    return unauthorizedResponse(
+      res,
+      'Token faltante o inválido',
+    );
+  }
+
+  const token = authorization
+    .slice('Bearer '.length)
+    .trim();
 
   if (!token) {
-    return res.status(401).json({
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Token faltante o inválido',
-      },
-    });
+    return unauthorizedResponse(
+      res,
+      'Token faltante o inválido',
+    );
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyToken(token);
+
+    if (
+      typeof decoded !== 'object' ||
+      decoded === null
+    ) {
+      return unauthorizedResponse(
+        res,
+        'El token no contiene un usuario válido',
+      );
+    }
+
+    const userId = Number(decoded.userId);
+
+    if (
+      !Number.isInteger(userId) ||
+      userId <= 0
+    ) {
+      return unauthorizedResponse(
+        res,
+        'El token no contiene un usuario válido',
+      );
+    }
+
     req.user = {
-      userId: decoded.userId,
-      email: decoded.email,
+      userId,
+      email:
+        typeof decoded.email === 'string'
+          ? decoded.email
+          : undefined,
     };
+
     return next();
-  } catch (error) {
-    return res.status(401).json({
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Token inválido o expirado',
-      },
-    });
+  } catch {
+    return unauthorizedResponse(
+      res,
+      'Token inválido o expirado',
+    );
   }
 }

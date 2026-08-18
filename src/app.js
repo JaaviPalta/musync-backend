@@ -1,8 +1,11 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+
 import { loggerMiddleware } from './middlewares/logger.middleware.js';
-import { errorHandlerMiddleware } from './middlewares/errorHandler.middleware.js';
 import { notFoundMiddleware } from './middlewares/notFound.middleware.js';
+import { errorHandlerMiddleware } from './middlewares/errorHandler.middleware.js';
+
 import authRoutes from './modules/auth/auth.routes.js';
 import profileRoutes from './modules/profile/profile.routes.js';
 import publicationRoutes from './modules/publications/publications.routes.js';
@@ -13,12 +16,16 @@ import orderRoutes from './modules/orders/orders.routes.js';
 
 const app = express();
 
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(loggerMiddleware);
 
 app.get('/health', (req, res) => {
-  res.status(200).json({ ok: true, message: 'MUSYNC backend funcionando' });
+  return res.status(200).json({
+    ok: true,
+    message: 'MUSYNC backend funcionando',
+  });
 });
 
 app.use('/api/auth', authRoutes);

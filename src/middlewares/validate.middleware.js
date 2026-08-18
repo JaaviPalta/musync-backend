@@ -1,7 +1,10 @@
-
 export function validateMiddleware(schema) {
   return (req, res, next) => {
-    if (!req.body || typeof req.body !== 'object') {
+    if (
+      !req.body ||
+      typeof req.body !== 'object' ||
+      Array.isArray(req.body)
+    ) {
       return res.status(400).json({
         error: {
           code: 'VALIDATION_ERROR',
@@ -11,25 +14,23 @@ export function validateMiddleware(schema) {
       });
     }
 
-    try {
-      const parsed = schema.parse(req.body);
-      req.body = parsed;
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Los datos enviados no son válidos',
-            details: error.errors.map((issue) => ({
-              field: issue.path.join('.') || 'body',
-              message: issue.message,
-            })),
-          },
-        });
-      }
+    const result = schema.safeParse(req.body);
 
-      next(error);
+    if (!result.success) {
+      return res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Los datos enviados no son válidos',
+          details: result.error.issues.map((issue) => ({
+            field: issue.path.join('.') || 'body',
+            message: issue.message,
+          })),
+        },
+      });
     }
+
+    req.body = result.data;
+
+    return next();
   };
 }

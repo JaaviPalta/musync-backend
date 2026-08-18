@@ -1,108 +1,269 @@
 import prisma from '../../lib/prisma.js';
 
-export async function createOrder(payload) {
-  const { buyerName, buyerEmail, items } = payload;
+function createHttpError(message, code, statusCode) {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = statusCode;
+  return error;
+}
 
-  const normalizedItems = [];
-  let total = 0;
+function parseOrderId(orderId) {
+  const parsedId = Number(orderId);
 
-  for (const item of items) {
-    const publication = await prisma.publication.findUnique({ where: { id: Number(item.publicationId) } });
-
-    if (!publication || !publication.isActive) {
-      const error = new Error('Una publicación no existe o está inactiva');
-      error.code = 'INVALID_ITEM';
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (publication.type !== 'music' && publication.type !== 'digital_product') {
-      const error = new Error('Solo se permiten música o productos digitales');
-      error.code = 'INVALID_TYPE';
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (publication.price === null) {
-      const error = new Error('La publicación no tiene precio válido');
-      error.code = 'INVALID_PRICE';
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const quantity = Number(item.quantity) || 1;
-    const lineTotal = publication.price * quantity;
-    total += lineTotal;
-
-    normalizedItems.push({
-      publicationId: publication.id,
-      quantity,
-      unitPrice: publication.price,
-      lineTotal,
-    });
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw createHttpError(
+      'El id de la orden no es válido',
+      'VALIDATION_ERROR',
+      400,
+    );
   }
 
-  const firstPublicationId = normalizedItems[0].publicationId;
-  const firstPublication = await prisma.publication.findUnique({ where: { id: firstPublicationId } });
+  return parsedId;
+}
 
-  const order = await prisma.order.create({
-    data: {
-      artistProfileId: firstPublication.artistProfileId,
-      buyerName: String(buyerName).trim(),
-      buyerEmail: String(buyerEmail).trim(),
-      total,
-      items: {
-        create: normalizedItems.map(({ publicationId, quantity, unitPrice, lineTotal }) => ({
-          publicationId,
-          quantity,
-          unitPrice,
-          lineTotal,
-        })),
+export async function createOrder(payload) {
+  const {
+    buyerName,
+    buyerEmail,
+    items,
+  } = payload;
+
+  const requestedItems = items.map((item) => ({
+    publicationId: item.publicationId,
+    quantity: item.quantity,
+  }));
+
+  const publicationIds = [
+    ...new Set(
+      requestedItems.map((item) => item.publicationId),
+    ),
+  ];
+
+  return prisma.$transaction(async (tx) => {
+    const publications = await tx.publication.findMany({
+      where: {
+        id: {
+          in: publicationIds,
+        },
       },
-    },
-    include: { items: true },
-  });
+      select: {
+        id: true,
+        type: true,
+        price: true,
+        isActive: true,
+        artistProfileId: true,
+      },
+    });
 
-  return order;
+    const publicationsById = new Map(
+      publications.map((publication) => [
+        publication.id,
+        publication,
+      ]),
+    );
+
+    for (const item of requestedItems) {
+      const publication = publicationsById.get(
+        item.publicationId,
+      );
+
+      if (!publication || !publication.isActive) {
+        throw createHttpError(
+          'Una publicación no existe o está inactiva',
+          'INVALID_ITEM',
+          400,
+        );
+      }
+
+      if (
+        publication.type !== 'music' &&
+        publication.type !== 'digital_product'
+      ) {
+        throw createHttpError(
+          'Solo se permiten publicaciones de música o productos digitales',
+          'INVALID_TYPE',
+          400,
+        );
+      }
+
+      if (
+        publication.price === null ||
+        publication.price === undefined ||
+        !Number.isInteger(publication.price) ||
+        publication.price < 0
+      ) {
+        throw createHttpError(
+          'La publicación no tiene un precio válido',
+          'INVALID_PRICE',
+          400,
+        );
+      }
+    }
+
+    const artistProfileIds = new Set(
+      requestedItems.map((item) => {
+        const publication = publicationsById.get(
+          item.publicationId,
+        );
+
+        return publication.artistProfileId;
+      }),
+    );
+
+    if (artistProfileIds.size !== 1) {
+      throw createHttpError(
+        'Una orden solo puede contener publicaciones del mismo artista',
+        'INVALID_ORDER',
+        400,
+      );
+    }
+
+    let total = 0;
+
+    const normalizedItems = requestedItems.map((item) => {
+      const publication = publicationsById.get(
+        item.publicationId,
+      );
+
+      const unitPrice = publication.price;
+      const lineTotal = unitPrice * item.quantity;
+
+      total += lineTotal;
+
+      return {
+        publicationId: publication.id,
+        quantity: item.quantity,
+        unitPrice,
+        lineTotal,
+      };
+    });
+
+    if (!Number.isSafeInteger(total)) {
+      throw createHttpError(
+        'El total de la orden excede el límite permitido',
+        'INVALID_TOTAL',
+        400,
+      );
+    }
+
+    const artistProfileId = [...artistProfileIds][0];
+
+    return tx.order.create({
+      data: {
+        artistProfileId,
+        buyerName,
+        buyerEmail,
+        total,
+
+        items: {
+          create: normalizedItems,
+        },
+      },
+
+      include: {
+        items: {
+          include: {
+            publication: {
+              select: {
+                id: true,
+                title: true,
+                type: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  });
 }
 
 export async function getOrdersByArtist(userId) {
-  const profile = await prisma.artistProfile.findUnique({ where: { userId } });
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
+  });
 
   if (!profile) {
-    const error = new Error('Perfil no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
   return prisma.order.findMany({
-    where: { artistProfileId: profile.id },
-    include: { items: { include: { publication: true } } },
-    orderBy: { createdAt: 'desc' },
+    where: {
+      artistProfileId: profile.id,
+    },
+    include: {
+      items: {
+        include: {
+          publication: {
+            select: {
+              id: true,
+              title: true,
+              type: true,
+              price: true,
+              imageUrl: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
   });
 }
 
 export async function getOrderById(userId, orderId) {
-  const profile = await prisma.artistProfile.findUnique({ where: { userId } });
+  const parsedOrderId = parseOrderId(orderId);
 
-  if (!profile) {
-    const error = new Error('Perfil no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const order = await prisma.order.findUnique({
-    where: { id: Number(orderId) },
-    include: { items: { include: { publication: true } } },
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
   });
 
-  if (!order || order.artistProfileId !== profile.id) {
-    const error = new Error('Orden no encontrada');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+  if (!profile) {
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
+  }
+
+  const order = await prisma.order.findFirst({
+    where: {
+      id: parsedOrderId,
+      artistProfileId: profile.id,
+    },
+    include: {
+      items: {
+        include: {
+          publication: {
+            select: {
+              id: true,
+              title: true,
+              type: true,
+              price: true,
+              imageUrl: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    throw createHttpError(
+      'Orden no encontrada',
+      'NOT_FOUND',
+      404,
+    );
   }
 
   return order;

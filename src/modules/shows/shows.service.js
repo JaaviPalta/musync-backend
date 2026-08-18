@@ -1,107 +1,225 @@
 import prisma from '../../lib/prisma.js';
 
+function createHttpError(message, code, statusCode) {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = statusCode;
+  return error;
+}
+
+function parseShowId(showId) {
+  const parsedId = Number(showId);
+
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw createHttpError(
+      'El id del show no es válido',
+      'VALIDATION_ERROR',
+      400,
+    );
+  }
+
+  return parsedId;
+}
+
+const showSelect = {
+  id: true,
+  name: true,
+  venue: true,
+  city: true,
+  showDate: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
+const publicShowSelect = {
+  id: true,
+  name: true,
+  venue: true,
+  city: true,
+  showDate: true,
+};
+
 export async function getShowsByUser(userId) {
-  const profile = await prisma.artistProfile.findUnique({ where: { userId } });
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
+  });
 
   if (!profile) {
-    const error = new Error('Perfil no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
   return prisma.show.findMany({
-    where: { artistProfileId: profile.id },
-    orderBy: { showDate: 'desc' },
+    where: {
+      artistProfileId: profile.id,
+    },
+    select: showSelect,
+    orderBy: {
+      showDate: 'asc',
+    },
   });
 }
 
 export async function getArtistShows(username) {
   const profile = await prisma.artistProfile.findUnique({
     where: { username },
-    include: { shows: { orderBy: { showDate: 'desc' } } },
+    select: {
+      id: true,
+      shows: {
+        select: publicShowSelect,
+        orderBy: {
+          showDate: 'asc',
+        },
+      },
+    },
   });
 
   if (!profile) {
-    const error = new Error('Perfil artístico no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+    throw createHttpError(
+      'Perfil artístico no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
   return profile.shows;
 }
 
 export async function createShow(userId, payload) {
-  const profile = await prisma.artistProfile.findUnique({ where: { userId } });
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
+  });
 
   if (!profile) {
-    const error = new Error('Perfil no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
   return prisma.show.create({
     data: {
       artistProfileId: profile.id,
-      name: String(payload.name).trim(),
+      name: payload.name,
       venue: payload.venue ?? null,
       city: payload.city ?? null,
-      showDate: new Date(payload.showDate),
+      showDate: payload.showDate,
     },
+    select: showSelect,
   });
 }
 
-export async function updateShowById(userId, showId, payload) {
-  const profile = await prisma.artistProfile.findUnique({ where: { userId } });
+export async function updateShowById(
+  userId,
+  showId,
+  payload,
+) {
+  const id = parseShowId(showId);
+
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
+  });
 
   if (!profile) {
-    const error = new Error('Perfil no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
-  const show = await prisma.show.findUnique({ where: { id: Number(showId) } });
+  const show = await prisma.show.findFirst({
+    where: {
+      id,
+      artistProfileId: profile.id,
+    },
+    select: {
+      id: true,
+    },
+  });
 
-  if (!show || show.artistProfileId !== profile.id) {
-    const error = new Error('No tienes permisos para editar este show');
-    error.code = 'FORBIDDEN';
-    error.statusCode = 403;
-    throw error;
+  if (!show) {
+    throw createHttpError(
+      'Show no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
+
+  const allowedFields = [
+    'name',
+    'venue',
+    'city',
+    'showDate',
+  ];
+
+  const updateData = Object.fromEntries(
+    allowedFields
+      .filter((field) => payload[field] !== undefined)
+      .map((field) => [field, payload[field]]),
+  );
 
   return prisma.show.update({
-    where: { id: Number(showId) },
-    data: {
-      ...(payload.name !== undefined ? { name: String(payload.name).trim() } : {}),
-      ...(payload.venue !== undefined ? { venue: payload.venue ? String(payload.venue).trim() : null } : {}),
-      ...(payload.city !== undefined ? { city: payload.city ? String(payload.city).trim() : null } : {}),
-      ...(payload.showDate !== undefined ? { showDate: new Date(payload.showDate) } : {}),
+    where: {
+      id,
     },
+    data: updateData,
+    select: showSelect,
   });
 }
 
 export async function deleteShowById(userId, showId) {
-  const profile = await prisma.artistProfile.findUnique({ where: { userId } });
+  const id = parseShowId(showId);
+
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+    },
+  });
 
   if (!profile) {
-    const error = new Error('Perfil no encontrado');
-    error.code = 'NOT_FOUND';
-    error.statusCode = 404;
-    throw error;
+    throw createHttpError(
+      'Perfil no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
-  const show = await prisma.show.findUnique({ where: { id: Number(showId) } });
+  const show = await prisma.show.findFirst({
+    where: {
+      id,
+      artistProfileId: profile.id,
+    },
+    select: {
+      id: true,
+    },
+  });
 
-  if (!show || show.artistProfileId !== profile.id) {
-    const error = new Error('No tienes permisos para eliminar este show');
-    error.code = 'FORBIDDEN';
-    error.statusCode = 403;
-    throw error;
+  if (!show) {
+    throw createHttpError(
+      'Show no encontrado',
+      'NOT_FOUND',
+      404,
+    );
   }
 
-  await prisma.show.delete({ where: { id: Number(showId) } });
-  return true;
+  await prisma.show.delete({
+    where: {
+      id,
+    },
+  });
 }

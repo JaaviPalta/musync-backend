@@ -1,7 +1,13 @@
 import { Router } from 'express';
+
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { validateMiddleware } from '../../middlewares/validate.middleware.js';
-import { createShowSchema, updateShowSchema } from './shows.schema.js';
+
+import {
+  createShowSchema,
+  updateShowSchema,
+} from './shows.schema.js';
+
 import {
   getMyShowsController,
   createShowController,
@@ -12,10 +18,35 @@ import {
 
 const router = Router();
 
-router.get('/shows', authMiddleware, getMyShowsController);
-router.post('/shows', authMiddleware, validateMiddleware(createShowSchema), createShowController);
-router.get('/artists/:username/shows', getArtistShowsController);
-router.put('/shows/:id', authMiddleware, validateMiddleware(updateShowSchema), updateShowController);
-router.delete('/shows/:id', authMiddleware, deleteShowController);
+router.get(
+  '/shows',
+  authMiddleware,
+  getMyShowsController,
+);
+
+router.post(
+  '/shows',
+  authMiddleware,
+  validateMiddleware(createShowSchema),
+  createShowController,
+);
+
+router.get(
+  '/artists/:username/shows',
+  getArtistShowsController,
+);
+
+router.patch(
+  '/shows/:id',
+  authMiddleware,
+  validateMiddleware(updateShowSchema),
+  updateShowController,
+);
+
+router.delete(
+  '/shows/:id',
+  authMiddleware,
+  deleteShowController,
+);
 
 export default router;

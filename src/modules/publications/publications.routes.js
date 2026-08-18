@@ -1,13 +1,34 @@
 import { Router } from 'express';
+
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { validateMiddleware } from '../../middlewares/validate.middleware.js';
+
 import { createPublicationSchema } from './publications.schema.js';
-import { getMyPublicationsController, createPublicationController, getArtistPublicationsController } from './publications.controller.js';
+
+import {
+  getMyPublicationsController,
+  createPublicationController,
+  getArtistPublicationsController,
+} from './publications.controller.js';
 
 const router = Router();
 
-router.get('/publications', authMiddleware, getMyPublicationsController);
-router.post('/publications', authMiddleware, validateMiddleware(createPublicationSchema), createPublicationController);
-router.get('/artists/:username/publications', getArtistPublicationsController);
+router.get(
+  '/publications',
+  authMiddleware,
+  getMyPublicationsController,
+);
+
+router.post(
+  '/publications',
+  authMiddleware,
+  validateMiddleware(createPublicationSchema),
+  createPublicationController,
+);
+
+router.get(
+  '/artists/:username/publications',
+  getArtistPublicationsController,
+);
 
 export default router;
