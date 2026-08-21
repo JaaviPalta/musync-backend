@@ -96,6 +96,9 @@ model Publication {
   price             Int?
   imageUrl          String?          @map("image_url")
   externalUrl       String?          @map("external_url")
+  format            String?          @db.VarChar(160)
+  sizeLabel         String?          @map("size_label") @db.VarChar(60)
+  license           String?          @db.VarChar(160)
   isActive          Boolean          @default(true) @map("is_active")
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
@@ -133,6 +136,8 @@ model Quote {
   publicationId     Int?               @map("publication_id")
   publication       Publication?       @relation(fields: [publicationId], references: [id], onDelete: SetNull)
   requestType       QuoteRequestType   @default(quote) @map("request_type")
+  category          String?            @db.VarChar(120)
+  subcategory       String?            @db.VarChar(120)
   clientName        String             @db.VarChar(120) @map("client_name")
   clientEmail       String             @db.VarChar(255) @map("client_email")
   budget            Int?
