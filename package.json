@@ -3,13 +3,19 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "build": "npm install && npx prisma generate && npx prisma migrate deploy",
+    "seed": "node prisma/seed.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:seed": "node prisma/seed.js"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +34,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
     "@types/node": "^26.2.0",
     "eslint": "^10.8.1",
     "nodemon": "^3.1.14",

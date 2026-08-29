@@ -100,4 +100,4 @@ export async function deleteShowController(
   } catch (error) {
     return next(error);
   }
-}s
+}
