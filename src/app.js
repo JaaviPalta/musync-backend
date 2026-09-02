@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 
+import prisma from './lib/prisma.js';
 import { loggerMiddleware } from './middlewares/logger.middleware.js';
 import { notFoundMiddleware } from './middlewares/notFound.middleware.js';
 import { errorHandlerMiddleware } from './middlewares/errorHandler.middleware.js';
@@ -26,6 +27,24 @@ app.get('/health', (req, res) => {
     ok: true,
     message: 'MUSYNC backend funcionando',
   });
+});
+
+// Ruta temporal de diagnóstico — muestra el error real de conexión a la
+// base de datos sin importar NODE_ENV. Borrar una vez resuelto el 500 en
+// producción (ver conversación sobre el deploy de Vercel).
+app.get('/api/_debug/db', async (req, res) => {
+  try {
+    const result = await prisma.$queryRaw`SELECT 1 as ok`;
+    return res.status(200).json({ ok: true, result });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      cause: error.cause ? String(error.cause) : undefined,
+    });
+  }
 });
 
 app.use('/api/auth', authRoutes);
