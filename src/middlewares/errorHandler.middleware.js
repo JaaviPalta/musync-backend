@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../generated/prisma/client.js';
 
 export function errorHandlerMiddleware(error, req, res, next) {
   console.error('[ERROR]', {

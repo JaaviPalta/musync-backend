@@ -22,6 +22,20 @@ export const createQuoteSchema = z
       .enum(['quote', 'booking'])
       .default('quote'),
 
+    category: z
+      .string()
+      .trim()
+      .max(120, 'La categoría no puede superar los 120 caracteres')
+      .nullable()
+      .optional(),
+
+    subcategory: z
+      .string()
+      .trim()
+      .max(120, 'La subcategoría no puede superar los 120 caracteres')
+      .nullable()
+      .optional(),
+
     clientName: z
       .string()
       .trim()
