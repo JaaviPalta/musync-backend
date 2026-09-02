@@ -18,6 +18,14 @@ const activeSchema = z
   .boolean()
   .optional();
 
+const optionalSpecText = (max) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullable()
+    .optional();
+
 export const createPublicationSchema = z.object({
   type: publicationTypeSchema,
 
@@ -44,6 +52,10 @@ export const createPublicationSchema = z.object({
 
   imageUrl: nullableUrlSchema,
   externalUrl: nullableUrlSchema,
+
+  format: optionalSpecText(160),
+  sizeLabel: optionalSpecText(60),
+  license: optionalSpecText(160),
 
   // El servidor debe decidir el valor inicial.
   // Por eso no lo aceptamos desde el cliente.
@@ -76,6 +88,10 @@ export const updatePublicationSchema = z.object({
 
   imageUrl: nullableUrlSchema,
   externalUrl: nullableUrlSchema,
+
+  format: optionalSpecText(160),
+  sizeLabel: optionalSpecText(60),
+  license: optionalSpecText(160),
 
   isActive: activeSchema,
 });

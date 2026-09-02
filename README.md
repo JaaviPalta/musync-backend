@@ -81,6 +81,12 @@ La API estará disponible en:
 http://localhost:3000/api
 ```
 
+El estado del servidor puede comprobarse en:
+
+```text
+http://localhost:3000/health
+```
+
 ## Estructura del proyecto
 
 ```text
@@ -99,22 +105,23 @@ prisma/
 
 | Método | Ruta | Acceso | Función |
 |---|---|---|---|
+| GET | `/health` | Público | Comprobar que el backend está funcionando. |
 | POST | `/api/auth/register` | Público | Registrar un artista. |
 | POST | `/api/auth/login` | Público | Iniciar sesión. |
 | GET | `/api/auth/me` | Privado | Obtener la sesión actual. |
 | GET | `/api/artists/:username` | Público | Obtener el perfil público completo de un artista. |
 | GET | `/api/profile` | Privado | Obtener el perfil propio. |
-| PUT | `/api/profile` | Privado | Crear o actualizar el perfil propio. |
+| PATCH | `/api/profile` | Privado | Crear o actualizar el perfil propio. |
 | GET | `/api/publications/:id` | Público | Ver el detalle de una publicación activa. |
 | GET | `/api/artists/:username/publications` | Público | Listar las publicaciones de un artista. |
 | GET | `/api/publications` | Privado | Listar las publicaciones propias. |
 | POST | `/api/publications` | Privado | Crear una publicación. |
-| PUT | `/api/publications/:id` | Privado | Editar una publicación propia. |
+| PATCH | `/api/publications/:id` | Privado | Editar una publicación propia. |
 | DELETE | `/api/publications/:id` | Privado | Eliminar o desactivar una publicación propia. |
 | GET | `/api/artists/:username/shows` | Público | Listar los shows de un artista. |
 | GET | `/api/shows` | Privado | Listar los shows propios. |
 | POST | `/api/shows` | Privado | Crear un show. |
-| PUT | `/api/shows/:id` | Privado | Editar un show propio. |
+| PATCH | `/api/shows/:id` | Privado | Editar un show propio. |
 | DELETE | `/api/shows/:id` | Privado | Eliminar un show propio. |
 | POST | `/api/quotes` | Público | Enviar una cotización o solicitud de contratación. |
 | GET | `/api/quotes` | Privado | Listar las solicitudes recibidas. |
