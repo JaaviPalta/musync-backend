@@ -18,10 +18,15 @@ export async function getMyProfileController(req, res, next) {
 
 export async function updateProfileController(req, res, next) {
   try {
-    // req.body ya fue validado y normalizado por validateMiddleware
+    const avatarFile = req.files?.avatar?.[0];
+    const coverFile = req.files?.cover?.[0];
     const profile = await upsertProfile(
       req.user.userId,
       req.body,
+      {
+        avatarFile,
+        coverFile,
+      }
     );
 
     return res.status(200).json({

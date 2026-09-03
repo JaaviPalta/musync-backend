@@ -31,6 +31,7 @@ export async function createPublicationController(
     const publication = await createPublication(
       req.user.userId,
       req.body,
+      req.file,
     );
 
     return res.status(201).json({

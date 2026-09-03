@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { validateMiddleware } from '../../middlewares/validate.middleware.js';
+import upload from "../../middlewares/upload.middleware.js";
 
 import { updateProfileSchema } from './profile.schema.js';
 
@@ -22,6 +23,10 @@ router.get(
 router.patch(
   '/profile',
   authMiddleware,
+  upload.fields([
+    { name: 'avatar', maxCount: 1 },
+    { name: 'cover', maxCount: 1 },
+  ]),
   validateMiddleware(updateProfileSchema),
   updateProfileController,
 );

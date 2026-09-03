@@ -32,6 +32,7 @@ export async function updatePublicationByIdController(
       req.user.userId,
       req.params.id,
       req.body,
+      req.file,
     );
 
     return res.status(200).json({

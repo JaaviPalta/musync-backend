@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma.js';
+import { uploadImageToCloudinary } from '../../lib/cloudinary.js';
 
 function createHttpError(message, code, statusCode) {
   const error = new Error(message);
@@ -91,7 +92,7 @@ export async function getArtistPublications(username) {
   return profile.publications;
 }
 
-export async function createPublication(userId, payload) {
+export async function createPublication(userId, payload, file = null) {
   const profile = await prisma.artistProfile.findUnique({
     where: { userId },
     select: {
@@ -107,6 +108,8 @@ export async function createPublication(userId, payload) {
     );
   }
 
+  const imageUrl = file ? (await uploadImageToCloudinary(file, 'musync/publications')).secure_url : (payload.imageUrl ?? null);
+
   return prisma.publication.create({
     data: {
       artistProfileId: profile.id,
@@ -114,7 +117,7 @@ export async function createPublication(userId, payload) {
       title: payload.title,
       description: payload.description ?? null,
       price: payload.price ?? null,
-      imageUrl: payload.imageUrl ?? null,
+      imageUrl,
       externalUrl: payload.externalUrl ?? null,
       format: payload.format ?? null,
       sizeLabel: payload.sizeLabel ?? null,

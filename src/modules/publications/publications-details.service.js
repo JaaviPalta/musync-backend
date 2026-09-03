@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma.js';
+import { uploadImageToCloudinary } from '../../lib/cloudinary.js';
 
 function createHttpError(message, code, statusCode) {
   const error = new Error(message);
@@ -77,6 +78,7 @@ export async function updatePublicationById(
   userId,
   publicationId,
   payload,
+  file = null,
 ) {
   const id = parsePublicationId(publicationId);
 
@@ -118,6 +120,11 @@ export async function updatePublicationById(
       ([, value]) => value !== undefined,
     ),
   );
+
+  if (file) {
+    const uploaded = await uploadImageToCloudinary(file, 'musync/publications');
+    updateData.imageUrl = uploaded.secure_url;
+  }
 
   return prisma.publication.update({
     where: { id },

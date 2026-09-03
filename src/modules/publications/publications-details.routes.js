@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { validateMiddleware } from '../../middlewares/validate.middleware.js';
+import upload from '../../middlewares/upload.middleware.js';
 
 import { updatePublicationSchema } from './publications.schema.js';
 
@@ -21,6 +22,7 @@ router.get(
 router.patch(
   '/publications/:id',
   authMiddleware,
+  upload.single('image'),
   validateMiddleware(updatePublicationSchema),
   updatePublicationByIdController,
 );

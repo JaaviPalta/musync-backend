@@ -1,5 +1,6 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import prisma from '../../lib/prisma.js';
+import { uploadImageToCloudinary } from '../../lib/cloudinary.js';
 
 const PROFILE_FIELDS = [
   'artistName',
@@ -75,8 +76,21 @@ export async function getProfileByUserId(userId) {
   return profile;
 }
 
-export async function upsertProfile(userId, data) {
+export async function upsertProfile(userId, data, files = {}) {
   const profileData = normalizeProfileData(data);
+
+  const avatarFile = files?.avatarFile;
+  const coverFile = files?.coverFile;
+
+  if (avatarFile) {
+    const avatarUpload = await uploadImageToCloudinary(avatarFile, 'musync/profile/avatar');
+    profileData.avatarUrl = avatarUpload.secure_url;
+  }
+
+  if (coverFile) {
+    const coverUpload = await uploadImageToCloudinary(coverFile, 'musync/profile/cover');
+    profileData.coverUrl = coverUpload.secure_url;
+  }
 
   const createData = {
     userId,
