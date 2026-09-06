@@ -91,3 +91,11 @@ export const updateQuoteStatusSchema = z.object({
     'rejected',
   ]),
 });
+
+export const createMessageSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, 'El mensaje no puede estar vacío')
+    .max(2000, 'El mensaje no puede superar los 2000 caracteres'),
+});

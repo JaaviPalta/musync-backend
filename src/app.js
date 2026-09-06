@@ -14,6 +14,7 @@ import publicationDetailsRoutes from './modules/publications/publications-detail
 import showRoutes from './modules/shows/shows.routes.js';
 import quoteRoutes from './modules/quotes/quotes.routes.js';
 import orderRoutes from './modules/orders/orders.routes.js';
+import trackingRoutes from './modules/tracking/tracking.routes.js';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api', publicationDetailsRoutes);
 app.use('/api', showRoutes);
 app.use('/api', quoteRoutes);
 app.use('/api', orderRoutes);
+app.use('/api', trackingRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);

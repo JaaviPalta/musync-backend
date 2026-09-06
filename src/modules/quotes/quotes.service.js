@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma.js';
+import { sendQuoteTrackingEmail } from '../../lib/email.js';
 
 function createHttpError(message, code, statusCode) {
   const error = new Error(message);
@@ -50,6 +51,7 @@ const quoteSelect = {
   eventDate: true,
   message: true,
   status: true,
+  accessToken: true,
   createdAt: true,
   updatedAt: true,
 
@@ -146,6 +148,13 @@ export async function createQuote(payload) {
     select: quoteSelect,
   });
 
+  await sendQuoteTrackingEmail({
+    to: quote.clientEmail,
+    clientName: quote.clientName,
+    artistName: quote.artistProfile.artistName,
+    accessToken: quote.accessToken,
+  });
+
   return quote;
 }
 
@@ -229,4 +238,61 @@ export async function updateQuoteStatus(
     },
     select: quoteSelect,
   });
+}
+
+async function findOwnedQuote(userId, quoteId) {
+  const id = parseQuoteId(quoteId);
+
+  const profile = await prisma.artistProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  if (!profile) {
+    throw createHttpError('Perfil no encontrado', 'NOT_FOUND', 404);
+  }
+
+  const quote = await prisma.quote.findFirst({
+    where: { id, artistProfileId: profile.id },
+    select: { id: true, status: true },
+  });
+
+  if (!quote) {
+    throw createHttpError('Cotización no encontrada', 'NOT_FOUND', 404);
+  }
+
+  return quote;
+}
+
+export async function getQuoteMessages(userId, quoteId) {
+  const quote = await findOwnedQuote(userId, quoteId);
+
+  return prisma.quoteMessage.findMany({
+    where: { quoteId: quote.id },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
+export async function createQuoteMessage(userId, quoteId, body) {
+  const quote = await findOwnedQuote(userId, quoteId);
+
+  const message = await prisma.quoteMessage.create({
+    data: {
+      quoteId: quote.id,
+      sender: 'artist',
+      body,
+    },
+  });
+
+  // Si era la primera respuesta a una solicitud recién llegada, pasa a
+  // "en revisión" automáticamente — ya no tiene sentido que siga como
+  // "nueva" si el artista ya empezó a conversar.
+  if (quote.status === 'pending') {
+    await prisma.quote.update({
+      where: { id: quote.id },
+      data: { status: 'reviewed' },
+    });
+  }
+
+  return message;
 }

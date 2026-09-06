@@ -2,6 +2,8 @@ import {
   createQuote,
   getQuotes,
   updateQuoteStatus,
+  getQuoteMessages,
+  createQuoteMessage,
 } from './quotes.service.js';
 
 export async function createQuoteController(
@@ -31,6 +33,43 @@ export async function getQuotesController(
 
     return res.status(200).json({
       data: quotes,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function getQuoteMessagesController(
+  req,
+  res,
+  next,
+) {
+  try {
+    const messages = await getQuoteMessages(req.user.userId, req.params.id);
+
+    return res.status(200).json({
+      data: messages,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function createQuoteMessageController(
+  req,
+  res,
+  next,
+) {
+  try {
+    const message = await createQuoteMessage(
+      req.user.userId,
+      req.params.id,
+      req.body.body,
+    );
+
+    return res.status(201).json({
+      data: message,
+      message: 'Mensaje enviado correctamente',
     });
   } catch (error) {
     return next(error);
