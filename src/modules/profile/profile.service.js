@@ -60,17 +60,14 @@ export async function getProfileByUserId(userId) {
           id: true,
           name: true,
           email: true,
+          role: true,
         },
       },
     },
   });
 
   if (!profile) {
-    throw createHttpError(
-      'Perfil no encontrado',
-      'NOT_FOUND',
-      404,
-    );
+    return null;
   }
 
   return profile;
@@ -128,6 +125,65 @@ export async function upsertProfile(userId, data, files = {}) {
 
     throw error;
   }
+}
+
+export async function getArtistsList({ search = '', page = 1, limit = 20 } = {}) {
+  const normalizedSearch = String(search).trim();
+  const safePage = Number.isFinite(Number(page)) ? Math.max(Number(page), 1) : 1;
+  const safeLimit = Number.isFinite(Number(limit)) ? Math.min(Math.max(Number(limit), 1), 100) : 20;
+  const skip = (safePage - 1) * safeLimit;
+
+  const where = normalizedSearch
+    ? {
+        OR: [
+          { artistName: { contains: normalizedSearch, mode: 'insensitive' } },
+          { username: { contains: normalizedSearch, mode: 'insensitive' } },
+          { specialty: { contains: normalizedSearch, mode: 'insensitive' } },
+          { city: { contains: normalizedSearch, mode: 'insensitive' } },
+          { country: { contains: normalizedSearch, mode: 'insensitive' } },
+        ],
+      }
+    : {};
+
+  const [artists, total] = await Promise.all([
+    prisma.artistProfile.findMany({
+      where,
+      skip,
+      take: safeLimit,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        artistName: true,
+        username: true,
+        bio: true,
+        specialty: true,
+        city: true,
+        country: true,
+        avatarUrl: true,
+        coverUrl: true,
+        spotifyUrl: true,
+        youtubeUrl: true,
+        instagramUrl: true,
+        tiktokUrl: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    }),
+    prisma.artistProfile.count({ where }),
+  ]);
+
+  return {
+    artists,
+    total,
+    page: safePage,
+    limit: safeLimit,
+    totalPages: Math.ceil(total / safeLimit),
+  };
 }
 
 export async function getPublicProfile(username) {

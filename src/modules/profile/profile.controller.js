@@ -1,6 +1,7 @@
 import {
   getProfileByUserId,
   upsertProfile,
+  getArtistsList,
   getPublicProfile,
 } from './profile.service.js';
 
@@ -32,6 +33,32 @@ export async function updateProfileController(req, res, next) {
     return res.status(200).json({
       data: profile,
       message: 'Perfil actualizado correctamente',
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function getArtistsListController(req, res, next) {
+  try {
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 20);
+    const search = String(req.query.search ?? '');
+
+    const result = await getArtistsList({
+      page,
+      limit,
+      search,
+    });
+
+    return res.status(200).json({
+      data: result.artists,
+      meta: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
     });
   } catch (error) {
     return next(error);

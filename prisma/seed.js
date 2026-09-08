@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../src/lib/prisma.js';
 
 const ARTISTS_COUNT = 20;
+const CLIENTS_COUNT = 8;
 const PUBLICATIONS_PER_ARTIST = 4;
 const SHOWS_PER_ARTIST = 2;
 const QUOTES_COUNT = 12;
@@ -39,7 +40,25 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(TEST_PASSWORD, 10);
   const artists = [];
+  const clients = [];
   const publications = [];
+
+  console.log('Creando clientes de prueba...');
+
+  for (let i = 0; i < CLIENTS_COUNT; i++) {
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const client = await prisma.user.create({
+      data: {
+        name: `${firstName} ${lastName}`,
+        email: `client${i + 1}@musync.test`,
+        passwordHash,
+        role: 'client',
+      },
+    });
+
+    clients.push(client);
+  }
 
   console.log('Creando artistas y perfiles...');
 
@@ -59,6 +78,7 @@ async function main() {
         name: fullName,
         email: `artist${i + 1}@musync.test`,
         passwordHash,
+        role: 'artist',
         artistProfile: {
           create: {
             artistName,
@@ -220,6 +240,7 @@ async function main() {
   }
 
   console.log('Seed completado correctamente.');
+  console.log(`Clientes: ${clients.length}`);
   console.log(`Artistas: ${artists.length}`);
   console.log(`Publicaciones: ${publications.length}`);
   console.log(`Contraseña de prueba: ${TEST_PASSWORD}`);

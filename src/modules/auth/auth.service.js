@@ -61,6 +61,7 @@ function serializeUser(user) {
     id: user.id,
     name: user.name,
     email: user.email,
+    role: user.role,
   };
 }
 
@@ -68,12 +69,15 @@ export async function registerUser(data) {
   const {
     name,
     artistName,
+    artist_name,
     username,
     email,
     password,
+    role = 'artist',
   } = data;
 
-  const normalizedArtistName = artistName || name;
+  const normalizedArtistName = artistName || artist_name || name;
+  const normalizedRole = role === 'client' ? 'client' : 'artist';
 
   try {
     const user = await prisma.user.create({
@@ -81,20 +85,23 @@ export async function registerUser(data) {
         name,
         email,
         passwordHash: await hashPassword(password),
+        role: normalizedRole,
 
-        artistProfile: {
-          create: {
-            artistName: normalizedArtistName,
-            username,
+        ...(normalizedRole === 'artist' && {
+          artistProfile: {
+            create: {
+              artistName: normalizedArtistName,
+              username,
+            },
           },
-        },
+        }),
       },
 
       select: {
         id: true,
         name: true,
         email: true,
-
+        role: true,
         artistProfile: true,
       },
     });
@@ -124,6 +131,7 @@ export async function loginUser(data) {
       id: true,
       name: true,
       email: true,
+      role: true,
       passwordHash: true,
 
       artistProfile: true,
@@ -171,6 +179,7 @@ export async function getCurrentUser(userId) {
       id: true,
       name: true,
       email: true,
+      role: true,
 
       artistProfile: true,
     },

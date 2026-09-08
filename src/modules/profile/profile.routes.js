@@ -9,6 +9,7 @@ import { updateProfileSchema } from './profile.schema.js';
 import {
   getMyProfileController,
   updateProfileController,
+  getArtistsListController,
   getArtistProfileController,
 } from './profile.controller.js';
 
@@ -29,6 +30,11 @@ router.patch(
   ]),
   validateMiddleware(updateProfileSchema),
   updateProfileController,
+);
+
+router.get(
+  '/artists',
+  getArtistsListController,
 );
 
 router.get(
