@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
+import { requireArtist } from '../../middlewares/role.middleware.js';
 import { validateMiddleware } from '../../middlewares/validate.middleware.js';
 import upload from "../../middlewares/upload.middleware.js";
 
@@ -18,12 +19,14 @@ const router = Router();
 router.get(
   '/profile',
   authMiddleware,
+  requireArtist,
   getMyProfileController,
 );
 
 router.patch(
   '/profile',
   authMiddleware,
+  requireArtist,
   upload.fields([
     { name: 'avatar', maxCount: 1 },
     { name: 'cover', maxCount: 1 },

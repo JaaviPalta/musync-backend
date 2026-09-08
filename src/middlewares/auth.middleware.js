@@ -61,6 +61,10 @@ export function authMiddleware(req, res, next) {
         typeof decoded.email === 'string'
           ? decoded.email
           : undefined,
+      role:
+        decoded.role === 'artist' || decoded.role === 'client'
+          ? decoded.role
+          : undefined,
     };
 
     return next();

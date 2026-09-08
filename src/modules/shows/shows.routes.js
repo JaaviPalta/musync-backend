@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
+import { requireArtist } from '../../middlewares/role.middleware.js';
 import { validateMiddleware } from '../../middlewares/validate.middleware.js';
 
 import {
@@ -21,12 +22,14 @@ const router = Router();
 router.get(
   '/shows',
   authMiddleware,
+  requireArtist,
   getMyShowsController,
 );
 
 router.post(
   '/shows',
   authMiddleware,
+  requireArtist,
   validateMiddleware(createShowSchema),
   createShowController,
 );
@@ -39,6 +42,7 @@ router.get(
 router.patch(
   '/shows/:id',
   authMiddleware,
+  requireArtist,
   validateMiddleware(updateShowSchema),
   updateShowController,
 );
@@ -46,6 +50,7 @@ router.patch(
 router.delete(
   '/shows/:id',
   authMiddleware,
+  requireArtist,
   deleteShowController,
 );
 

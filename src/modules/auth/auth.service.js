@@ -109,6 +109,7 @@ export async function registerUser(data) {
     const token = signToken({
       userId: user.id,
       email: user.email,
+      role: user.role,
     });
 
     return {
@@ -162,6 +163,7 @@ export async function loginUser(data) {
   const token = signToken({
     userId: user.id,
     email: user.email,
+    role: user.role,
   });
 
   return {

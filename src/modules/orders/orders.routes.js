@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
+import { requireArtist } from '../../middlewares/role.middleware.js';
 import { validateMiddleware } from '../../middlewares/validate.middleware.js';
 
 import { createOrderSchema } from './orders.schema.js';
@@ -22,12 +23,14 @@ router.post(
 router.get(
   '/orders',
   authMiddleware,
+  requireArtist,
   getOrdersController,
 );
 
 router.get(
   '/orders/:id',
   authMiddleware,
+  requireArtist,
   getOrderByIdController,
 );
 
