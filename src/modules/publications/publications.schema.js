@@ -14,9 +14,16 @@ const nullableUrlSchema = z
   .nullable()
   .optional();
 
-const activeSchema = z
-  .boolean()
-  .optional();
+// Cuando el formulario de publicaciones manda esto (siempre va como
+// multipart/form-data, tenga imagen o no), isActive llega como el texto
+// "true"/"false", no como boolean real — FormData no tiene otra forma de
+// mandarlo. z.coerce.boolean() no sirve acá: Boolean("false") da true en
+// JS, así que coercionaría mal el caso "false". Hay que interpretarlo a mano.
+const activeSchema = z.preprocess((value) => {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+}, z.boolean().optional());
 
 const optionalSpecText = (max) =>
   z
