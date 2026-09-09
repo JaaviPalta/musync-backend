@@ -76,6 +76,8 @@ model ArtistProfile {
   specialty     String?         @db.VarChar(120)
   city          String?         @db.VarChar(120)
   country       String?         @db.VarChar(120)
+  tags          String[]        @default([])
+  availability  String?         @db.VarChar(60)
   avatarUrl     String?         @map("avatar_url")
   coverUrl      String?         @map("cover_url")
 

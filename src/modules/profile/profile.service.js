@@ -9,6 +9,7 @@ const PROFILE_FIELDS = [
   'specialty',
   'city',
   'country',
+  'availability',
   'avatarUrl',
   'coverUrl',
   'spotifyUrl',
@@ -76,6 +77,13 @@ export async function getProfileByUserId(userId) {
 export async function upsertProfile(userId, data, files = {}) {
   const profileData = normalizeProfileData(data);
 
+  // tags es un array — no pasa por normalizeProfileData porque esa función
+  // fuerza todo a String().trim(), lo que corrompería un array (String(['a','b'])
+  // da 'a,b', no un array). Se maneja aparte.
+  if (data.tags !== undefined) {
+    profileData.tags = data.tags;
+  }
+
   const avatarFile = files?.avatarFile;
   const coverFile = files?.coverFile;
 
@@ -97,12 +105,14 @@ export async function upsertProfile(userId, data, files = {}) {
     specialty: profileData.specialty ?? null,
     city: profileData.city ?? null,
     country: profileData.country ?? null,
+    availability: profileData.availability ?? null,
     avatarUrl: profileData.avatarUrl ?? null,
     coverUrl: profileData.coverUrl ?? null,
     spotifyUrl: profileData.spotifyUrl ?? null,
     youtubeUrl: profileData.youtubeUrl ?? null,
     instagramUrl: profileData.instagramUrl ?? null,
     tiktokUrl: profileData.tiktokUrl ?? null,
+    tags: profileData.tags ?? [],
   };
 
   try {
@@ -159,6 +169,8 @@ export async function getArtistsList({ search = '', page = 1, limit = 20 } = {})
         specialty: true,
         city: true,
         country: true,
+        tags: true,
+        availability: true,
         avatarUrl: true,
         coverUrl: true,
         spotifyUrl: true,
@@ -197,6 +209,8 @@ export async function getPublicProfile(username) {
       specialty: true,
       city: true,
       country: true,
+      tags: true,
+      availability: true,
       avatarUrl: true,
       coverUrl: true,
       spotifyUrl: true,

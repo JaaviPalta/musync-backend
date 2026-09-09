@@ -21,6 +21,26 @@ const optionalUrl = z
   .nullable()
   .optional();
 
+// Cuando el perfil se manda como JSON normal, tags llega como array real.
+// Cuando se manda como multipart (porque además se sube avatar o portada),
+// el front lo manda como un string con JSON.stringify() adentro, porque
+// FormData no tiene forma nativa de mandar un array — hay que aceptar los
+// dos casos acá.
+const tagsSchema = z.preprocess((value) => {
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : value;
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}, z
+  .array(z.string().trim().min(1).max(40))
+  .max(20, 'No puedes tener más de 20 tags')
+  .optional());
+
 export const updateProfileSchema = z.object({
   artistName: z
     .string()
@@ -44,6 +64,8 @@ export const updateProfileSchema = z.object({
   specialty: optionalShortText,
   city: optionalShortText,
   country: optionalShortText,
+  tags: tagsSchema,
+  availability: optionalShortText,
 
   avatarUrl: optionalUrl,
   coverUrl: optionalUrl,
